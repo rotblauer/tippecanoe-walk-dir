@@ -10,9 +10,9 @@ import (
 	"github.com/fsnotify/fsnotify"
 )
 
-var _source = filepath.Join(os.Getenv("HOME"), "dev", "rotblauer", "cattracks-split-months-gz", "output")
+var _source = filepath.Join(os.Getenv("HOME"), "dev", "rotblauer", "cattracks-split-cats-uniqcell-gz", "output")
 var flagSourceDir = flag.String("source", _source, "Source directory containing .json.gz files")
-var flagOutputRootFilepath = flag.String("output", filepath.Join(".", "output"), "Output root dir")
+var flagOutputRootFilepath = flag.String("output", filepath.Join(_source, "mbtiles"), "Output root dir")
 var flagForce = flag.Bool("force", false, "Force overwrite of existing files (otherwise skip if .mbtiles is newer than .json.gz)")
 var flagEnableFSWatch = flag.Bool("enable-fs-watch", false, "Enable watching of source directory for changes")
 
