@@ -10,12 +10,13 @@ import (
 	"github.com/fsnotify/fsnotify"
 )
 
-var myMonthsOutput = filepath.Join(os.Getenv("HOME"), "dev", "rotblauer", "cattracks-split-gz", "output")
-var flagSourceDir = flag.String("input", myMonthsOutput, "source directory")
-
+var _source = filepath.Join(os.Getenv("HOME"), "dev", "rotblauer", "cattracks-split-months-gz", "output")
+var flagSourceDir = flag.String("source", _source, "Source directory containing .json.gz files")
 var flagOutputRootFilepath = flag.String("output", filepath.Join(".", "output"), "Output root dir")
 var flagForce = flag.Bool("force", false, "Force overwrite of existing files (otherwise skip if .mbtiles is newer than .json.gz)")
+var flagEnableFSWatch = flag.Bool("enable-fs-watch", false, "Enable watching of source directory for changes")
 
+// walkDirRunTippe creates .mbtiles for each .json.gz file that doesn't yet have one.
 func walkDirRunTippe(dir string, changedPath string) {
 	log.Println("flagMonthsJSONGZRoot:", dir)
 	filepath.Walk(dir, func(path string, jsonGZInfo os.FileInfo, err error) error {
@@ -59,6 +60,10 @@ func main() {
 	flag.Parse()
 	os.MkdirAll(*flagOutputRootFilepath, 0755)
 	walkDirRunTippe(*flagSourceDir, "-")
+
+	if !*flagEnableFSWatch {
+		return
+	}
 
 	// Create new watcher.
 	watcher, err := fsnotify.NewWatcher()
