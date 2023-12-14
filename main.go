@@ -16,9 +16,11 @@ var flagOutputRootFilepath = flag.String("output", filepath.Join(".", "output"),
 var flagForce = flag.Bool("force", false, "Force overwrite of existing files (otherwise skip if .mbtiles is newer than .json.gz)")
 var flagEnableFSWatch = flag.Bool("enable-fs-watch", false, "Enable watching of source directory for changes")
 
-// walkDirRunTippe creates .mbtiles for each .json.gz file that doesn't yet have one.
+// walkDirRunTippe run tippecanoe to create .mbtiles for each .json.gz file that doesn't yet have one.
+// Without --force it may be run idempotently, skipping all cases where file.mbiles is newer than file.json.gz.
+// The layer name is the base filename of the .json.gz file, suffixed with "-layer", eg 'ia.json.gz-layer'.
 func walkDirRunTippe(dir string, changedPath string) {
-	log.Println("flagMonthsJSONGZRoot:", dir)
+	log.Println("source dir:", dir)
 	filepath.Walk(dir, func(path string, jsonGZInfo os.FileInfo, err error) error {
 		if err != nil {
 			log.Println("error walking path:", path, err)
@@ -32,6 +34,8 @@ func walkDirRunTippe(dir string, changedPath string) {
 		}
 
 		tilesPath := strings.Replace(path, ".json.gz", ".mbtiles", 1)
+
+		// --force?
 		if !*flagForce {
 			if tilesInfo, err := os.Stat(tilesPath); err == nil {
 				// if the modtime of the .json.gz is older than the .mbtiles, skip
