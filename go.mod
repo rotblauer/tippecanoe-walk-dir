@@ -1,4 +1,4 @@
-module github.com/rotblauer/tippecanoe-tile-join-months
+module github.com/rotblauer/tippecanoe-walk-dir
 
 go 1.21.2
 
