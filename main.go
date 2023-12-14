@@ -1,43 +1,100 @@
 package main
 
 import (
+	"flag"
 	"log"
 	"os"
 	"path/filepath"
 	"strings"
+
+	"github.com/fsnotify/fsnotify"
 )
 
-var monthsOutputRoot = filepath.Join(os.Getenv("HOME"), "dev", "rotblauer", "cattracks-split-gz", "output")
+var myMonthsOutput = filepath.Join(os.Getenv("HOME"), "dev", "rotblauer", "cattracks-split-gz", "output")
+var flagSourceDir = flag.String("input", myMonthsOutput, "source directory")
 
-func main() {
+var flagOutputRootFilepath = flag.String("output", filepath.Join(".", "output"), "Output root dir")
+var flagForce = flag.Bool("force", false, "Force overwrite of existing files (otherwise skip if .mbtiles is newer than .json.gz)")
 
-	tippeFiles := []string{}
-	filepath.Walk(monthsOutputRoot, func(path string, info os.FileInfo, err error) error {
-		if info.IsDir() {
-			// skip
+func walkDirRunTippe(dir string, changedPath string) {
+	log.Println("flagMonthsJSONGZRoot:", dir)
+	filepath.Walk(dir, func(path string, jsonGZInfo os.FileInfo, err error) error {
+		if err != nil {
+			log.Println("error walking path:", path, err)
+			return nil
+		}
+		if jsonGZInfo.IsDir() {
 			return nil
 		}
 		if filepath.Ext(path) != ".gz" {
 			return nil
 		}
-		if len(tippeFiles) == 2 {
-			return nil
+
+		tilesPath := strings.Replace(path, ".json.gz", ".mbtiles", 1)
+		if !*flagForce {
+			if tilesInfo, err := os.Stat(tilesPath); err == nil {
+				// if the modtime of the .json.gz is older than the .mbtiles, skip
+				if jsonGZInfo.ModTime().Before(tilesInfo.ModTime()) {
+					log.Printf("skipping %s, already exists and is fresh: %s\n", path, tilesPath)
+					return nil
+				}
+			}
 		}
-		if !strings.Contains(path, "2023-") {
-			return nil
-		}
-		tippeFiles = append(tippeFiles, path)
-		return nil
-	})
-	
-	// run tippecanoe on two months of json.gz files
-	for _, f := range tippeFiles {
-		out := strings.Replace(f, ".json.gz", ".mbtiles", 1)
+
+		log.Println("found file:", path)
+
+		f := path
+		log.Println("running tippecanoe on:", f)
+		out := filepath.Join(*flagOutputRootFilepath, filepath.Base(tilesPath))
 		in := f
 		name := filepath.Base(f) + "-layer"
-		err := runTippe(out, in, name)
-		if err != nil {
-			log.Fatal(err)
+		if err := runTippe(out, in, name); err != nil {
+			log.Println(err)
 		}
+		return nil
+	})
+}
+
+func main() {
+	flag.Parse()
+	os.MkdirAll(*flagOutputRootFilepath, 0755)
+	walkDirRunTippe(*flagSourceDir, "-")
+
+	// Create new watcher.
+	watcher, err := fsnotify.NewWatcher()
+	if err != nil {
+		log.Fatal(err)
 	}
+	defer watcher.Close()
+
+	// Start listening for events.
+	go func() {
+		for {
+			select {
+			case event, ok := <-watcher.Events:
+				if !ok {
+					return
+				}
+				log.Println("event:", event)
+				if event.Has(fsnotify.Write) {
+					log.Println("modified file:", event.Name)
+					walkDirRunTippe(*flagSourceDir, event.Name)
+				}
+			case err, ok := <-watcher.Errors:
+				if !ok {
+					return
+				}
+				log.Println("error:", err)
+			}
+		}
+	}()
+
+	// Add a path.
+	err = watcher.Add(*flagSourceDir)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	// Block main goroutine forever.
+	<-make(chan struct{})
 }

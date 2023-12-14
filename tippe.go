@@ -1,9 +1,11 @@
 package main
 
 import (
+	"fmt"
 	"log"
 	"os"
 	"os/exec"
+	"time"
 )
 
 func runTippe(out, in string, tilesetname string) error {
@@ -12,7 +14,12 @@ func runTippe(out, in string, tilesetname string) error {
 		return tipperr
 	}
 
-	log.Println("> [", tilesetname, "]", tippCmd, tippargs)
+	start := time.Now()
+	defer func() {
+		log.Printf("Finished tippecanoe on %s: %s\n", out, time.Since(start))
+	}()
+
+	// log.Println("> [", tilesetname, "]", tippCmd, tippargs)
 	tippmycanoe := exec.Command(tippCmd, tippargs...)
 	tippmycanoe.Stdout = os.Stdout
 	tippmycanoe.Stderr = os.Stderr
@@ -32,7 +39,8 @@ func runTippe(out, in string, tilesetname string) error {
 func getTippyProcess(out string, in string, tilesetname string) (tippCmd string, tippargs []string, err error) {
 	tippCmd = "/usr/local/bin/tippecanoe"
 	tippargs = []string{
-		"--maximum-tile-bytes", "330000", // num bytes/tile,default: 500kb=500000
+		// "--maximum-tile-bytes", "500000", // num bytes/tile,default: 500kb=500000
+		"--maximum-tile-bytes", fmt.Sprintf("%d", 500_000), // num bytes/tile,default: 500kb=500000
 		"--cluster-densest-as-needed",
 		"--cluster-distance=1",
 		"--calculate-feature-density",
@@ -61,4 +69,27 @@ func getTippyProcess(out string, in string, tilesetname string) (tippCmd string,
 		tippCmd = string(b)
 	}
 	return
+}
+
+func runTileJoin(in1, in2, out string) error {
+	tjCmd := "/usr/local/bin/tile-join"
+	tjargs := []string{
+		"-o", out,
+		"--force", // remove out.mbtiles if it already exists
+		in1, in2,
+	}
+	log.Println("> [tile-join]", tjCmd, tjargs)
+	tj := exec.Command(tjCmd, tjargs...)
+	tj.Stdout = os.Stdout
+	tj.Stderr = os.Stderr
+
+	err := tj.Start()
+	if err != nil {
+		log.Println("Error starting Cmd", err)
+		os.Exit(1)
+	}
+	if err := tj.Wait(); err != nil {
+		return err
+	}
+	return nil
 }
