@@ -34,10 +34,11 @@ func walkDirRunTippe(dir string, changedPath string) {
 		}
 
 		tilesPath := strings.Replace(path, ".json.gz", ".mbtiles", 1)
+		out := filepath.Join(*flagOutputRootFilepath, filepath.Base(tilesPath))
 
 		// --force?
 		if !*flagForce {
-			if tilesInfo, err := os.Stat(tilesPath); err == nil {
+			if tilesInfo, err := os.Stat(out); err == nil {
 				// if the modtime of the .json.gz is older than the .mbtiles, skip
 				if jsonGZInfo.ModTime().Before(tilesInfo.ModTime()) {
 					log.Printf("skipping %s, already exists and is fresh: %s\n", path, tilesPath)
@@ -50,7 +51,6 @@ func walkDirRunTippe(dir string, changedPath string) {
 
 		f := path
 		log.Println("running tippecanoe on:", f)
-		out := filepath.Join(*flagOutputRootFilepath, filepath.Base(tilesPath))
 		in := f
 		name := filepath.Base(f) + "-layer"
 		if err := runTippe(out, in, name); err != nil {
