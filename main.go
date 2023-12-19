@@ -29,7 +29,7 @@ func walkDirRunTippe(dir string, changedPath string) {
 		if jsonGZInfo.IsDir() {
 			return nil
 		}
-		if filepath.Ext(path) != ".gz" {
+		if filepath.Ext(path) != ".gz" || !strings.Contains(path, ".json.gz") {
 			return nil
 		}
 
@@ -47,13 +47,14 @@ func walkDirRunTippe(dir string, changedPath string) {
 			}
 		}
 
-		log.Println("found file:", path)
-
-		f := path
-		log.Println("running tippecanoe on:", f)
-		in := f
-		name := filepath.Base(f) + "-layer"
-		if err := runTippe(out, in, name); err != nil {
+		layerName := strings.ReplaceAll(filepath.Base(path), ".json.gz", "")
+		log.Printf(`running tippecanoe:
+- source: %s
+- output: %s
+- layer_name: %s
+`, path, out, layerName)
+		in := path
+		if err := runTippe(out, in, layerName); err != nil {
 			log.Println(err)
 		}
 		return nil
