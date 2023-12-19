@@ -8,6 +8,15 @@ import (
 	"time"
 )
 
+type prefixedWriter struct {
+	*log.Logger
+}
+
+func (pw prefixedWriter) Write(p []byte) (n int, err error) {
+	pw.Logger.Println(string(p))
+	return len(p), nil
+}
+
 func runTippe(out, in string, tilesetname string) error {
 	tippCmd, tippargs, tipperr := getTippyProcess(out, in, tilesetname)
 	if tipperr != nil {
@@ -23,6 +32,12 @@ func runTippe(out, in string, tilesetname string) error {
 	tippmycanoe := exec.Command(tippCmd, tippargs...)
 	tippmycanoe.Stdout = os.Stdout
 	tippmycanoe.Stderr = os.Stderr
+
+	prefix := fmt.Sprintf("[%s] ", tilesetname)
+	stdout := prefixedWriter{log.New(os.Stdout, prefix, log.LstdFlags|log.Lmsgprefix)}
+	tippmycanoe.Stdout = stdout
+	stderr := prefixedWriter{log.New(os.Stderr, prefix, log.LstdFlags|log.Lmsgprefix)}
+	tippmycanoe.Stderr = stderr
 
 	err := tippmycanoe.Start()
 	if err != nil {
