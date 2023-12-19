@@ -47,6 +47,7 @@ func walkDirRunTippe(dir string, changedPath string) {
 			}
 		}
 
+		// want: ia.level-23.json.gz -> ia.level-23
 		layerName := strings.ReplaceAll(filepath.Base(path), ".json.gz", "")
 		log.Printf(`running tippecanoe:
 - source: %s
@@ -64,7 +65,7 @@ func walkDirRunTippe(dir string, changedPath string) {
 func main() {
 	flag.Parse()
 	os.MkdirAll(*flagOutputRootFilepath, 0755)
-	walkDirRunTippe(*flagSourceDir, "-")
+	walkDirRunTippe(*flagSourceDir, "")
 
 	if !*flagEnableFSWatch {
 		return
