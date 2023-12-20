@@ -55,14 +55,21 @@ func getTippyProcess(out string, in string, tilesetname string) (tippCmd string,
 	tippCmd = "/usr/local/bin/tippecanoe"
 	tippargs = []string{
 		// "--maximum-tile-bytes", "500000", // num bytes/tile,default: 500kb=500000
-		"--maximum-tile-bytes", fmt.Sprintf("%d", 500_000), // num bytes/tile,default: 500kb=500000
+		"--maximum-tile-bytes", fmt.Sprintf("%d", 350_000), // num bytes/tile,default: 500kb=500000
 		"--cluster-densest-as-needed",
 		"--cluster-distance=1",
 		"--calculate-feature-density",
+		"--include UnixTime",
+		"--include Activity",
+		"--include Elevation",
+		"--include Speed",
+		"--include Accuracy",
+		"-EUnixTime:max",
 		"-EElevation:max",
 		"-ESpeed:max", // mean",
 		"-EAccuracy:mean",
 		"-EPressure:mean",
+		"--single-precision",
 		"-r1", // == --drop-rate
 		"--minimum-zoom", "3",
 		"--maximum-zoom", "18",
